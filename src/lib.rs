@@ -1,6 +1,6 @@
 use js_sys;
 use js_sys::{Object, Reflect};
-use log::{info, Level};
+use log::Level;
 use statrs::distribution::ContinuousCDF;
 use statrs::distribution::FisherSnedecor;
 use statrs::statistics::Statistics;
@@ -63,9 +63,9 @@ pub fn variance_test(column1: &JsValue, column2: &JsValue, tails: &JsValue) -> J
     // Set f and p in the object
     let dist = FisherSnedecor::new(n1 - 1.0, n2 - 1.0).unwrap();
     let p = match tails.as_str() {
-        "greater" => dist.cdf(1.0 / f),
+        "greater" => 1.0 - dist.cdf(f),
         "less" => dist.cdf(f),
-        "two-sided" => 2.0 * (1.0 - dist.cdf(f)),
+        "two-sided" => 2.0 * f64::min(1.0 - dist.cdf(f), dist.cdf(f)),
         _ => panic!("Invalid test type"),
     };
 
