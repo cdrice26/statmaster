@@ -74,3 +74,55 @@ pub fn variance_test(column1: &JsValue, column2: &JsValue, tails: &JsValue) -> J
 
     obj.into()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use js_sys::*;
+    use wasm_bindgen::JsValue;
+    use wasm_bindgen_test::*;
+
+    fn vec_to_jsvalue(vec: Vec<f64>) -> JsValue {
+        // Create a JavaScript array from the Vec
+        let js_array = js_sys::Array::new();
+        for item in vec {
+            js_array.push(&JsValue::from(item));
+        }
+        js_array.into() // Convert the js_sys::Array to JsValue
+    }
+
+    #[wasm_bindgen_test]
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_js_array_to_vector() {
+        let js_array = vec_to_jsvalue(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        let js_array_2 = vec_to_jsvalue(vec![2.0, 3.0, 4.0, 5.0, 6.0]);
+
+        let result = js_array_to_vector(&js_array);
+        let result_2 = js_array_to_vector(&js_array_2);
+
+        assert_eq!(result, vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        assert_eq!(result_2, vec![2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_variance_test() {
+        let column1 = vec_to_jsvalue(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        let column2 = vec_to_jsvalue(vec![2.0, 3.0, 4.0, 5.0, 6.0]);
+
+        let result1 = variance_test(&column1, &column2, &JsValue::from_str("less"));
+        let result2 = variance_test(&column1, &column2, &JsValue::from_str("greater"));
+        let result3 = variance_test(&column1, &column2, &JsValue::from_str("two-sided"));
+
+        let p1 = Reflect::get(&result1, &JsValue::from_str("p")).unwrap();
+        let p2 = Reflect::get(&result2, &JsValue::from_str("p")).unwrap();
+        let p3 = Reflect::get(&result3, &JsValue::from_str("p")).unwrap();
+
+        assert!((p1.as_f64().unwrap() - 0.5).abs() < 0.01);
+        assert!((p2.as_f64().unwrap() - 0.5).abs() < 0.01);
+        assert!((p3.as_f64().unwrap() - 1.0).abs() < 0.01);
+    }
+}
