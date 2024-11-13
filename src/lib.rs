@@ -7,6 +7,15 @@ use statrs::statistics::Statistics;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsValue;
 
+/// Converts a JavaScript array (JsValue) to a Rust vector of f64.
+///
+/// # Arguments
+///
+/// * `js_array` - A reference to a JsValue representing a JavaScript array.
+///
+/// # Returns
+///
+/// * A Vec<f64> containing the converted elements of the JavaScript array.
 #[wasm_bindgen]
 pub fn js_array_to_vector(js_array: &JsValue) -> Vec<f64> {
     // Convert the JsValue to a Vec<f64>
@@ -18,6 +27,17 @@ pub fn js_array_to_vector(js_array: &JsValue) -> Vec<f64> {
         .collect() // Collect into Vec<f64>
 }
 
+/// Performs a variance test between two columns of data represented as JavaScript arrays.
+///
+/// # Arguments
+///
+/// * `column1` - A reference to a JsValue representing the first JavaScript array.
+/// * `column2` - A reference to a JsValue representing the second JavaScript array.
+/// * `tails` - A reference to a JsValue indicating the type of test ("two-sided", "less", or "greater").
+///
+/// # Returns
+///
+/// * A JsValue object containing the test results, including "n1", "n2", "s1", "s2", "f", and "p".
 #[wasm_bindgen]
 pub fn variance_test(column1: &JsValue, column2: &JsValue, tails: &JsValue) -> JsValue {
     let tails = tails.as_string().unwrap(); // can be "two-sided", "less" or "greater"
@@ -82,6 +102,15 @@ mod tests {
     use wasm_bindgen::JsValue;
     use wasm_bindgen_test::*;
 
+    /// Converts a vector of f64 to a JsValue representing a JavaScript array.
+    ///
+    /// # Arguments
+    ///
+    /// * `vec` - A vector of f64 numbers to be converted.
+    ///
+    /// # Returns
+    ///
+    /// * A JsValue representing the JavaScript array.
     fn vec_to_jsvalue(vec: Vec<f64>) -> JsValue {
         // Create a JavaScript array from the Vec
         let js_array = js_sys::Array::new();
