@@ -10,12 +10,12 @@ use wasm_bindgen::JsValue;
 #[wasm_bindgen]
 pub fn js_array_to_vector(js_array: &JsValue) -> Vec<f64> {
     // Convert the JsValue to a Vec<f64>
-    let array: Vec<f64> = js_sys::Array::from(js_array)
-        .iter()
-        .filter_map(|value| value.as_f64()) // Convert each element to f64
-        .collect();
+    let array: Vec<JsValue> = js_sys::Array::from(js_array).to_vec(); // Convert to Vec<JsValue>
 
     array
+        .into_iter()
+        .filter_map(|value| value.as_f64()) // Filter and map to f64
+        .collect() // Collect into Vec<f64>
 }
 
 #[wasm_bindgen]
