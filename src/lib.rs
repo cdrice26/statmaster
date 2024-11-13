@@ -1,6 +1,5 @@
 use js_sys;
 use js_sys::{Object, Reflect};
-use log::Level;
 use statrs::distribution::ContinuousCDF;
 use statrs::distribution::FisherSnedecor;
 use statrs::statistics::Statistics;
@@ -16,8 +15,7 @@ use wasm_bindgen::JsValue;
 /// # Returns
 ///
 /// * A Vec<f64> containing the converted elements of the JavaScript array.
-#[wasm_bindgen]
-pub fn js_array_to_vector(js_array: &JsValue) -> Vec<f64> {
+fn js_array_to_vector(js_array: &JsValue) -> Vec<f64> {
     // Convert the JsValue to a Vec<f64>
     let array: Vec<JsValue> = js_sys::Array::from(js_array).to_vec(); // Convert to Vec<JsValue>
 
@@ -25,6 +23,11 @@ pub fn js_array_to_vector(js_array: &JsValue) -> Vec<f64> {
         .into_iter()
         .filter_map(|value| value.as_f64()) // Filter and map to f64
         .collect() // Collect into Vec<f64>
+}
+
+fn js_nested_array_to_vector(js_array: &JsValue) -> Vec<JsValue> {
+    // Convert the JsValue to a Vec<JsValue>
+    js_sys::Array::from(js_array).to_vec() // Convert to Vec<JsValue>
 }
 
 /// Performs a variance test between two columns of data represented as JavaScript arrays.
@@ -41,7 +44,6 @@ pub fn js_array_to_vector(js_array: &JsValue) -> Vec<f64> {
 #[wasm_bindgen]
 pub fn variance_test(column1: &JsValue, column2: &JsValue, tails: &JsValue) -> JsValue {
     let tails = tails.as_string().unwrap(); // can be "two-sided", "less" or "greater"
-    let _ = console_log::init_with_level(Level::Debug);
 
     let obj = Object::new();
 
@@ -92,6 +94,54 @@ pub fn variance_test(column1: &JsValue, column2: &JsValue, tails: &JsValue) -> J
     let _ = Reflect::set(&obj, &JsValue::from_str("f"), &JsValue::from_f64(f));
     let _ = Reflect::set(&obj, &JsValue::from_str("p"), &JsValue::from_f64(p));
 
+    obj.into()
+}
+
+/// Computes the F-statistic and p-value for a one-way ANOVA test.
+///
+/// # Arguments
+///
+/// * `data` - A JavaScript array of arrays, where each subarray represents a
+///   group of data.
+///
+/// # Returns
+///
+/// * An object with two properties: `f` and `p`, the F-statistic and p-value,
+///   respectively.
+#[wasm_bindgen]
+pub fn anova_1way_test(data: &JsValue) -> JsValue {
+    let columns = js_nested_array_to_vector(data);
+    let test_data: Vec<Vec<f64>> = columns
+        .iter()
+        .map(|item| js_array_to_vector(item))
+        .collect();
+    let n = test_data.len() as f64;
+    let k = test_data[0].len() as f64;
+
+    let mu_i = test_data.iter().map(|col| col.mean()).collect::<Vec<f64>>();
+    let mu_t = mu_i.iter().sum::<f64>() / k;
+
+    let sstr = n * mu_i.iter().map(|mi| (mi - mu_t).powi(2)).sum::<f64>();
+    let tss = test_data
+        .iter()
+        .map(|col| col.iter().map(|x| (x - mu_t).powi(2)).sum::<f64>())
+        .sum::<f64>();
+    let sse = tss - sstr;
+
+    let df_tr = k - 1.0;
+    let df_e = (n * k) - k;
+
+    let ms_tr = sstr / df_tr;
+    let ms_e = sse / df_e;
+
+    let f = ms_tr / ms_e;
+
+    let dist = FisherSnedecor::new(df_tr, df_e).unwrap();
+    let p = 1.0 - dist.cdf(f);
+
+    let obj = Object::new();
+    let _ = Reflect::set(&obj, &JsValue::from_str("f"), &JsValue::from_f64(f));
+    let _ = Reflect::set(&obj, &JsValue::from_str("p"), &JsValue::from_f64(p));
     obj.into()
 }
 
