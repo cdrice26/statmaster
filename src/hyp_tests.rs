@@ -178,6 +178,8 @@ mod tests {
 
     use super::*;
 
+    wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
     #[allow(unused)]
     #[wasm_bindgen_test]
     fn test_variance_test() {
@@ -212,5 +214,23 @@ mod tests {
 
         assert!(f.as_f64().unwrap().abs() - 1.0 < 0.01);
         assert!(p.as_f64().unwrap().abs() - 0.3465 < 0.01);
+    }
+
+    #[allow(unused)]
+    #[wasm_bindgen_test]
+    fn test_regression_test() {
+        let column1 = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let column2 = vec![2.0, 30.0, 4.0, 50.0, 6.0];
+
+        let x = vec_to_jsvalue(column1);
+        let y = vec_to_jsvalue(column2);
+
+        let result = regression_test(&x, &y);
+
+        let p = Reflect::get(&result, &JsValue::from_str("p")).unwrap();
+        let f = Reflect::get(&result, &JsValue::from_str("f")).unwrap();
+
+        assert!(f.as_f64().unwrap().abs() - 0.1396 < 0.01);
+        assert!(p.as_f64().unwrap().abs() - 0.7335 < 0.01);
     }
 }
