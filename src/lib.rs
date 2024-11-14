@@ -183,11 +183,13 @@ mod tests {
         js_array.into() // Convert the js_sys::Array to JsValue
     }
 
+    #[allow(unused)]
     #[wasm_bindgen_test]
     fn it_works() {
         assert_eq!(2 + 2, 4);
     }
 
+    #[allow(unused)]
     #[wasm_bindgen_test]
     fn test_js_array_to_vector() {
         let js_array = vec_to_jsvalue(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
@@ -200,6 +202,7 @@ mod tests {
         assert_eq!(result_2, vec![2.0, 3.0, 4.0, 5.0, 6.0]);
     }
 
+    #[allow(unused)]
     #[wasm_bindgen_test]
     fn test_variance_test() {
         let column1 = vec_to_jsvalue(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
@@ -218,6 +221,7 @@ mod tests {
         assert!((p3.as_f64().unwrap() - 1.0).abs() < 0.01);
     }
 
+    #[allow(unused)]
     #[wasm_bindgen_test]
     fn test_anova_1way_test() {
         let column1 = vec![1.0, 2.0, 3.0, 4.0, 5.0];
