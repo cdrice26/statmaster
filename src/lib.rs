@@ -156,6 +156,63 @@ pub fn anova_1way_test(data: &JsValue) -> JsValue {
     obj.into()
 }
 
+#[wasm_bindgen]
+pub fn regression_test(x: &JsValue, y: &JsValue) -> JsValue {
+    let _ = console_log::init_with_level(Level::Debug);
+
+    info!("X: {:#?}, Y: {:#?}", x, y);
+
+    let x_vec = js_array_to_vector(x);
+    let y_vec = js_array_to_vector(y);
+
+    info!("X: {:#?}, Y: {:#?}", x_vec, y_vec);
+
+    let n = x_vec.len() as f64;
+
+    let sxy = x_vec
+        .iter()
+        .zip(y_vec.iter())
+        .map(|(x, y)| x * y)
+        .sum::<f64>()
+        - (1.0 / n) * x_vec.iter().sum::<f64>() * y_vec.iter().sum::<f64>();
+    let sxx = x_vec.iter().map(|x| x.powi(2)).sum::<f64>()
+        - (1.0 / n) * (x_vec.iter().sum::<f64>()).powi(2);
+    let syy = y_vec.iter().map(|y| y.powi(2)).sum::<f64>()
+        - (1.0 / n) * (y_vec.iter().sum::<f64>()).powi(2);
+
+    info!("SXY: {}, SXX: {}, SYY: {}", sxy, sxx, syy);
+
+    let tss = syy;
+    let ssr = sxy.powi(2) / sxx;
+    let sse = tss - ssr;
+
+    info!("TSS: {}, SSR: {}, SSE: {}", tss, ssr, sse);
+
+    let df_tr = 1.0;
+    let df_e = n - 2.0;
+
+    info!("DF_TR: {}, DF_E: {}", df_tr, df_e);
+
+    let ms_tr = ssr / df_tr;
+    let ms_e = sse / df_e;
+
+    info!("MS_TR: {}, MS_E: {}", ms_tr, ms_e);
+
+    let f = ms_tr / ms_e;
+
+    info!("F: {}", f);
+
+    let dist = FisherSnedecor::new(df_tr, df_e).unwrap();
+    let p = 1.0 - dist.cdf(f);
+
+    info!("P: {}", p);
+
+    let obj = Object::new();
+    let _ = Reflect::set(&obj, &JsValue::from_str("f"), &JsValue::from_f64(f));
+    let _ = Reflect::set(&obj, &JsValue::from_str("p"), &JsValue::from_f64(p));
+    obj.into()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
