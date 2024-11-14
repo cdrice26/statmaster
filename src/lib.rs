@@ -183,6 +183,15 @@ mod tests {
         js_array.into() // Convert the js_sys::Array to JsValue
     }
 
+    /// Converts a vector of vectors of f64 to a JsValue representing a nested JavaScript array.
+    ///
+    /// # Arguments
+    ///
+    /// * `vec` - A vector of vectors of f64 numbers to be converted.
+    ///
+    /// # Returns
+    ///
+    /// * A JsValue representing the nested JavaScript array.
     fn nested_vec_to_jsvalue(vec: Vec<Vec<f64>>) -> JsValue {
         // Create a JavaScript array from the Vec
         let js_array = js_sys::Array::new();
