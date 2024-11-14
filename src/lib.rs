@@ -26,6 +26,15 @@ fn js_array_to_vector(js_array: &JsValue) -> Vec<f64> {
         .collect() // Collect into Vec<f64>
 }
 
+/// Converts a nested JavaScript array (JsValue) to a Rust vector of JsValue.
+///
+/// # Arguments
+///
+/// * `js_array` - A reference to a JsValue representing a nested JavaScript array.
+///
+/// # Returns
+///
+/// * A Vec<JsValue> containing the converted elements of the nested JavaScript array.
 fn js_nested_array_to_vector(js_array: &JsValue) -> Vec<JsValue> {
     // Convert the JsValue to a Vec<JsValue>
     js_sys::Array::from(js_array).to_vec() // Convert to Vec<JsValue>
