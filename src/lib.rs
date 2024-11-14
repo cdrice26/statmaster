@@ -1,5 +1,6 @@
 use js_sys;
 use js_sys::{Object, Reflect};
+use log::{info, log_enabled, Level};
 use statrs::distribution::ContinuousCDF;
 use statrs::distribution::FisherSnedecor;
 use statrs::statistics::Statistics;
@@ -115,8 +116,9 @@ pub fn anova_1way_test(data: &JsValue) -> JsValue {
         .iter()
         .map(|item| js_array_to_vector(item))
         .collect();
-    let n = test_data.len() as f64;
-    let k = test_data[0].len() as f64;
+
+    let n = test_data[0].len() as f64;
+    let k = test_data.len() as f64;
 
     let mu_i = test_data.iter().map(|col| col.mean()).collect::<Vec<f64>>();
     let mu_t = mu_i.iter().sum::<f64>() / k;
@@ -152,6 +154,8 @@ mod tests {
     use wasm_bindgen::JsValue;
     use wasm_bindgen_test::*;
 
+    wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
     /// Converts a vector of f64 to a JsValue representing a JavaScript array.
     ///
     /// # Arguments
@@ -166,6 +170,15 @@ mod tests {
         let js_array = js_sys::Array::new();
         for item in vec {
             js_array.push(&JsValue::from(item));
+        }
+        js_array.into() // Convert the js_sys::Array to JsValue
+    }
+
+    fn nested_vec_to_jsvalue(vec: Vec<Vec<f64>>) -> JsValue {
+        // Create a JavaScript array from the Vec
+        let js_array = js_sys::Array::new();
+        for item in vec {
+            js_array.push(&vec_to_jsvalue(item));
         }
         js_array.into() // Convert the js_sys::Array to JsValue
     }
@@ -203,5 +216,21 @@ mod tests {
         assert!((p1.as_f64().unwrap() - 0.5).abs() < 0.01);
         assert!((p2.as_f64().unwrap() - 0.5).abs() < 0.01);
         assert!((p3.as_f64().unwrap() - 1.0).abs() < 0.01);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_anova_1way_test() {
+        let column1 = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let column2 = vec![2.0, 3.0, 4.0, 5.0, 6.0];
+        let data = vec![column1, column2];
+        let data_js = nested_vec_to_jsvalue(data);
+
+        let result = anova_1way_test(&data_js);
+
+        let p = Reflect::get(&result, &JsValue::from_str("p")).unwrap();
+        let f = Reflect::get(&result, &JsValue::from_str("f")).unwrap();
+
+        assert!(f.as_f64().unwrap().abs() - 1.0 < 0.01);
+        assert!(p.as_f64().unwrap().abs() - 0.3465 < 0.01);
     }
 }
