@@ -212,8 +212,8 @@ mod tests {
         let p = Reflect::get(&result, &JsValue::from_str("p")).unwrap();
         let f = Reflect::get(&result, &JsValue::from_str("f")).unwrap();
 
-        assert!(f.as_f64().unwrap().abs() - 1.0 < 0.01);
-        assert!(p.as_f64().unwrap().abs() - 0.3465 < 0.01);
+        assert!((f.as_f64().unwrap() - 1.0).abs() < 0.01);
+        assert!((p.as_f64().unwrap() - 0.3465).abs() < 0.01);
     }
 
     #[allow(unused)]
@@ -230,7 +230,7 @@ mod tests {
         let p = Reflect::get(&result, &JsValue::from_str("p")).unwrap();
         let f = Reflect::get(&result, &JsValue::from_str("f")).unwrap();
 
-        assert!(f.as_f64().unwrap().abs() - 0.1396 < 0.01);
-        assert!(p.as_f64().unwrap().abs() - 0.7335 < 0.01);
+        assert!((f.as_f64().unwrap() - 0.1396).abs() < 0.01);
+        assert!((p.as_f64().unwrap() - 0.7335).abs() < 0.01);
     }
 }
