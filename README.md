@@ -48,4 +48,4 @@ regression_test(x: Array<number>, y: Array<number>): {f: number, p: number}
 ```
 
 ## Installation
-StatMaster is not yet stable and is not published on npm. To install, clone this repo, run ```wasm-pack build --target web```, then change into the ```pkg``` directory. ```npm link```. Then in the project you wish to use this in, run ```npm link statmaster```. You will need to run ```npm link statmaster``` any time you refresh your dependencies.
+StatMaster is not yet stable and is not published on npm. To install, clone this repo, run ```wasm-pack build --target web```, then change into the ```pkg``` directory and run ```npm link```. Then in the project you wish to use this in, run ```npm link statmaster```. You will need to run ```npm link statmaster``` any time you refresh your dependencies.
