@@ -3,6 +3,12 @@
 This is a WebAssembly library for performing hypothesis tests and confidence intervals in statistics. It is based on [statrs](https://crates.io/crates/statrs) and simply uses its provided distributions to compute hypothesis tests and confidence intervals.
 
 ## Usage
+This project uses ES modules. You can import whatever functions you wish to use. The default export, however, is ```init```, and you MUST import this. Before you use any functions from the library, make sure you run
+```ts
+await init();
+```
+You can use JS's relatively new top-level await feature to simplify this.
+
 ### Confidence Intervals
 - One-sample Z-interval
 ```ts
@@ -42,4 +48,4 @@ regression_test(x: Array<number>, y: Array<number>): {f: number, p: number}
 ```
 
 ## Installation
-StatMaster is not yet stable and is not published on npm. To install, clone this repo, run ```wasm-pack build --target web``` followed by ```npm link```. Then in the project you wish to use this in, run ```npm link statmaster```. You will need to run ```npm link statmaster``` any time you refresh your dependencies.
+StatMaster is not yet stable and is not published on npm. To install, clone this repo, run ```wasm-pack build --target web```, then change into the ```pkg``` directory. ```npm link```. Then in the project you wish to use this in, run ```npm link statmaster```. You will need to run ```npm link statmaster``` any time you refresh your dependencies.
