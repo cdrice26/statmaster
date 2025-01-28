@@ -123,6 +123,30 @@ pub fn two_samp_t_test(
     obj.into()
 }
 
+/// Performs a matched pairs t-test.
+///
+/// # Arguments
+///
+/// * `column1` - A reference to a JsValue representing the first JavaScript array.
+/// * `column2` - A reference to a JsValue representing the second JavaScript array.
+/// * `delta0` - A reference to a JsValue representing the difference between the two means.
+/// * `tails` - A reference to a JsValue indicating the type of test ("two-sided", "less", or "greater").
+///
+/// # Returns
+///
+/// * A JsValue object containing the test statistic t and p-value p.
+#[wasm_bindgen]
+pub fn matched_pairs_t_test(
+    column1: &JsValue,
+    column2: &JsValue,
+    delta0: &JsValue,
+    tails: &JsValue,
+) -> JsValue {
+    let data = subtract_jsvalue_arrays(column1, column2);
+
+    one_samp_t_test(&data, tails, delta0)
+}
+
 /// Performs a variance test between two columns of data represented as JavaScript arrays.
 ///
 /// # Arguments
@@ -354,6 +378,40 @@ mod tests {
         assert!((p1.as_f64().unwrap() - 0.3466).abs() < 0.01);
         assert!((p2.as_f64().unwrap() - 0.8267).abs() < 0.01);
         assert!((p3.as_f64().unwrap() - 0.1733).abs() < 0.01);
+    }
+
+    #[allow(unused)]
+    #[wasm_bindgen_test]
+    fn test_matched_pairs_t_test() {
+        let column1 = vec_to_jsvalue(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        let column2 = vec_to_jsvalue(vec![2.0, 5.0, 4.0, 7.0, 9.0]);
+
+        let result1 = matched_pairs_t_test(
+            &column1,
+            &column2,
+            &JsValue::from_f64(0.0),
+            &JsValue::from_str("two-sided"),
+        );
+        let result2 = matched_pairs_t_test(
+            &column1,
+            &column2,
+            &JsValue::from_f64(0.0),
+            &JsValue::from_str("greater"),
+        );
+        let result3 = matched_pairs_t_test(
+            &column1,
+            &column2,
+            &JsValue::from_f64(0.0),
+            &JsValue::from_str("less"),
+        );
+
+        let p1 = Reflect::get(&result1, &JsValue::from_str("p")).unwrap();
+        let p2 = Reflect::get(&result2, &JsValue::from_str("p")).unwrap();
+        let p3 = Reflect::get(&result3, &JsValue::from_str("p")).unwrap();
+
+        assert!((p1.as_f64().unwrap() - 0.01613).abs() < 0.01);
+        assert!((p2.as_f64().unwrap() - 0.9919).abs() < 0.01);
+        assert!((p3.as_f64().unwrap() - 0.008065).abs() < 0.01);
     }
 
     #[allow(unused)]

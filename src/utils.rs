@@ -1,6 +1,23 @@
 use js_sys;
 use wasm_bindgen::JsValue;
 
+/// Subtracts two JavaScript arrays and returns the result as a new JavaScript array.
+///
+/// # Arguments
+///
+/// * `arr1` - A reference to a JsValue representing the first JavaScript array.
+/// * `arr2` - A reference to a JsValue representing the second JavaScript array.
+///
+/// # Returns
+///
+/// * A JsValue representing the result of subtracting the elements of `arr2` from `arr1`.
+pub fn subtract_jsvalue_arrays(arr1: &JsValue, arr2: &JsValue) -> JsValue {
+    let a1 = js_array_to_vector(arr1);
+    let a2 = js_array_to_vector(arr2);
+
+    vec_to_jsvalue(a1.iter().zip(a2.iter()).map(|(x, y)| x - y).collect())
+}
+
 /// Converts a JavaScript array (JsValue) to a Rust vector of f64.
 ///
 /// # Arguments
@@ -43,7 +60,6 @@ pub fn js_nested_array_to_vector(js_array: &JsValue) -> Vec<JsValue> {
 /// # Returns
 ///
 /// * A JsValue representing the JavaScript array.
-#[allow(unused)]
 pub fn vec_to_jsvalue(vec: Vec<f64>) -> JsValue {
     // Create a JavaScript array from the Vec
     let js_array = js_sys::Array::new();
@@ -96,5 +112,19 @@ mod tests {
 
         assert_eq!(result, vec![1.0, 2.0, 3.0, 4.0, 5.0]);
         assert_eq!(result_2, vec![2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
+
+    #[allow(unused)]
+    #[wasm_bindgen_test]
+    fn test_subtract_jsvalue_arrays() {
+        let js_array = vec_to_jsvalue(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        let js_array_2 = vec_to_jsvalue(vec![2.0, 3.0, 4.0, 5.0, 6.0]);
+
+        let result = subtract_jsvalue_arrays(&js_array, &js_array_2);
+
+        assert_eq!(
+            js_array_to_vector(&result),
+            vec![-1.0, -1.0, -1.0, -1.0, -1.0]
+        );
     }
 }
