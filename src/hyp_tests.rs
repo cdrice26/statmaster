@@ -17,7 +17,7 @@ use wasm_bindgen::prelude::*;
 ///
 /// # Returns
 ///
-/// * A JsValue representing the p-value of the one-sample t-test.
+/// * A JsValue representing the test statistic and p-value of the one-sample t-test.
 #[wasm_bindgen]
 pub fn one_samp_t_test(column: &JsValue, tails: &JsValue, mu0: &JsValue) -> JsValue {
     let tails = tails.as_string().unwrap(); // can be "two-sided", "less" or "greater"
@@ -68,13 +68,28 @@ pub fn one_samp_t_test(column: &JsValue, tails: &JsValue, mu0: &JsValue) -> JsVa
     obj.into()
 }
 
+/// Performs a two-sample t-test.
+///     
+/// # Arguments
+///
+/// * `column1` - A reference to a JsValue representing the first JavaScript array.
+/// * `column2` - A reference to a JsValue representing the second JavaScript array.
+/// * `delta0` - A reference to a JsValue representing the hypothesized difference in means.
+/// * `tails` - A reference to a JsValue indicating the type of test ("two-sided", "less", or "greater").
+///
+/// # Returns
+///
+/// * A JsValue representing the test statistic and p-value of the two-sample t-test.
 #[wasm_bindgen]
 pub fn two_samp_t_test(
     column1: &JsValue,
     column2: &JsValue,
+    delta0: &JsValue,
     tails: &JsValue,
-    is_paired: &JsValue,
 ) -> JsValue {
+    let d0 = delta0.as_f64().unwrap();
+    let tails = tails.as_string().unwrap();
+
     let c1 = js_array_to_vector(column1);
     let c2 = js_array_to_vector(column2);
 
@@ -87,8 +102,22 @@ pub fn two_samp_t_test(
     let s1 = c1.iter().map(|x| (x - mean1).powi(2)).sum::<f64>() / (n1 - 1.0);
     let s2 = c2.iter().map(|x| (x - mean2).powi(2)).sum::<f64>() / (n2 - 1.0);
 
+    let t = (mean1 - mean2 - d0) / f64::sqrt(s1 / n1 + s2 / n2);
+
+    let df = (s1 / n1 + s2 / n2).powi(2)
+        / ((s1 / n1).powi(2) / (n1 - 1.0) + (s2 / n2).powi(2) / (n2 - 1.0));
+
+    let dist = StudentsT::new(0.0, 1.0, df).unwrap();
+
+    let p = match tails.as_str() {
+        "two-sided" => 2.0 * (1.0 - dist.cdf(t.abs())),
+        "less" => dist.cdf(t),
+        "greater" => 1.0 - dist.cdf(t),
+        _ => 0.0,
+    };
+
     let obj = Object::new();
-    let _ = Reflect::set(&obj, &JsValue::from_str("f"), &JsValue::from_f64(f));
+    let _ = Reflect::set(&obj, &JsValue::from_str("t"), &JsValue::from_f64(t));
     let _ = Reflect::set(&obj, &JsValue::from_str("p"), &JsValue::from_f64(p));
 
     obj.into()
@@ -104,7 +133,7 @@ pub fn two_samp_t_test(
 ///
 /// # Returns
 ///
-/// * A JsValue object containing the test results, including "n1", "n2", "s1", "s2", "f", and "p".
+/// * A JsValue object containing the test statistic f and p-value p.
 #[wasm_bindgen]
 pub fn variance_test(column1: &JsValue, column2: &JsValue, tails: &JsValue) -> JsValue {
     let tails = tails.as_string().unwrap(); // can be "two-sided", "less" or "greater"
@@ -291,6 +320,40 @@ mod tests {
         assert!((p1.as_f64().unwrap() - 0.01324).abs() < 0.01);
         assert!((p2.as_f64().unwrap() - 0.006618).abs() < 0.01);
         assert!((p3.as_f64().unwrap() - 0.9934).abs() < 0.01);
+    }
+
+    #[allow(unused)]
+    #[wasm_bindgen_test]
+    fn test_two_samp_t_test() {
+        let column1 = vec_to_jsvalue(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        let column2 = vec_to_jsvalue(vec![2.0, 3.0, 4.0, 5.0, 6.0]);
+
+        let result1 = two_samp_t_test(
+            &column1,
+            &column2,
+            &JsValue::from_f64(0.0),
+            &JsValue::from_str("two-sided"),
+        );
+        let result2 = two_samp_t_test(
+            &column1,
+            &column2,
+            &JsValue::from_f64(0.0),
+            &JsValue::from_str("greater"),
+        );
+        let result3 = two_samp_t_test(
+            &column1,
+            &column2,
+            &JsValue::from_f64(0.0),
+            &JsValue::from_str("less"),
+        );
+
+        let p1 = Reflect::get(&result1, &JsValue::from_str("p")).unwrap();
+        let p2 = Reflect::get(&result2, &JsValue::from_str("p")).unwrap();
+        let p3 = Reflect::get(&result3, &JsValue::from_str("p")).unwrap();
+
+        assert!((p1.as_f64().unwrap() - 0.3466).abs() < 0.01);
+        assert!((p2.as_f64().unwrap() - 0.8267).abs() < 0.01);
+        assert!((p3.as_f64().unwrap() - 0.1733).abs() < 0.01);
     }
 
     #[allow(unused)]
