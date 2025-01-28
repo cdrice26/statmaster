@@ -3,8 +3,96 @@ use js_sys::Object;
 use js_sys::Reflect;
 use statrs::distribution::ContinuousCDF;
 use statrs::distribution::FisherSnedecor;
+use statrs::distribution::StudentsT;
 use statrs::statistics::Statistics;
 use wasm_bindgen::prelude::*;
+
+/// Performs a one-sample t-test on a column of data represented as a JavaScript array.
+///
+/// # Arguments
+///
+/// * `column` - A reference to a JsValue representing a JavaScript array of f64 numbers.
+/// * `tails` - A reference to a JsValue indicating the type of test ("two-sided", "less", or "greater").
+/// * `mu0` - A reference to a JsValue representing the null hypothesis mean.
+///
+/// # Returns
+///
+/// * A JsValue representing the p-value of the one-sample t-test.
+#[wasm_bindgen]
+pub fn one_samp_t_test(column: &JsValue, tails: &JsValue, mu0: &JsValue) -> JsValue {
+    let tails = tails.as_string().unwrap(); // can be "two-sided", "less" or "greater"
+    let mu0 = mu0.as_f64().unwrap();
+
+    let obj = Object::new();
+
+    if tails != "two-sided" && tails != "less" && tails != "greater" {
+        let _ = Reflect::set(
+            &obj,
+            &JsValue::from_str("error"),
+            &JsValue::from_str("Invalid test type"),
+        );
+        return obj.into();
+    }
+
+    let data = js_array_to_vector(column);
+
+    let n = data.len() as f64;
+    let mean = data.iter().sum::<f64>() / n;
+    let variance = data.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (n - 1.0);
+    let std_dev = variance.sqrt();
+
+    // Standard error of the mean
+    let std_error = std_dev / n.sqrt();
+
+    // t-statistic
+    let t = (mean - mu0) / std_error;
+
+    // Degrees of freedom
+    let df = n - 1.0;
+
+    // Create t-distribution
+    let t_dist = StudentsT::new(0.0, 1.0, df).unwrap();
+
+    // Calculate p-value using t-distribution
+    let p = match tails.as_str() {
+        "two-sided" => 2.0 * (1.0 - t_dist.cdf(t.abs())),
+        "less" => t_dist.cdf(t),
+        "greater" => 1.0 - t_dist.cdf(t),
+        _ => 0.0,
+    };
+
+    let obj = Object::new();
+    let _ = Reflect::set(&obj, &JsValue::from_str("t"), &JsValue::from_f64(t));
+    let _ = Reflect::set(&obj, &JsValue::from_str("p"), &JsValue::from_f64(p));
+
+    obj.into()
+}
+
+#[wasm_bindgen]
+pub fn two_samp_t_test(
+    column1: &JsValue,
+    column2: &JsValue,
+    tails: &JsValue,
+    is_paired: &JsValue,
+) -> JsValue {
+    let c1 = js_array_to_vector(column1);
+    let c2 = js_array_to_vector(column2);
+
+    let n1 = c1.len() as f64;
+    let n2 = c2.len() as f64;
+
+    let mean1 = c1.iter().sum::<f64>() / n1;
+    let mean2 = c2.iter().sum::<f64>() / n2;
+
+    let s1 = c1.iter().map(|x| (x - mean1).powi(2)).sum::<f64>() / (n1 - 1.0);
+    let s2 = c2.iter().map(|x| (x - mean2).powi(2)).sum::<f64>() / (n2 - 1.0);
+
+    let obj = Object::new();
+    let _ = Reflect::set(&obj, &JsValue::from_str("f"), &JsValue::from_f64(f));
+    let _ = Reflect::set(&obj, &JsValue::from_str("p"), &JsValue::from_f64(p));
+
+    obj.into()
+}
 
 /// Performs a variance test between two columns of data represented as JavaScript arrays.
 ///
@@ -52,11 +140,6 @@ pub fn variance_test(column1: &JsValue, column2: &JsValue, tails: &JsValue) -> J
     }
 
     let f = s1.powi(2) / s2.powi(2);
-
-    let _ = Reflect::set(&obj, &JsValue::from_str("n1"), &JsValue::from_f64(n1));
-    let _ = Reflect::set(&obj, &JsValue::from_str("n2"), &JsValue::from_f64(n2));
-    let _ = Reflect::set(&obj, &JsValue::from_str("s1"), &JsValue::from_f64(s1));
-    let _ = Reflect::set(&obj, &JsValue::from_str("s2"), &JsValue::from_f64(s2));
 
     // Set f and p in the object
     let dist = FisherSnedecor::new(n1 - 1.0, n2 - 1.0).unwrap();
@@ -179,6 +262,36 @@ mod tests {
     use super::*;
 
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
+    #[allow(unused)]
+    #[wasm_bindgen_test]
+    fn test_one_samp_t_test() {
+        let column1 = vec_to_jsvalue(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+
+        let result1 = one_samp_t_test(
+            &column1,
+            &JsValue::from_str("two-sided"),
+            &JsValue::from_f64(0.0),
+        );
+        let result2 = one_samp_t_test(
+            &column1,
+            &JsValue::from_str("greater"),
+            &JsValue::from_f64(0.0),
+        );
+        let result3 = one_samp_t_test(
+            &column1,
+            &JsValue::from_str("less"),
+            &JsValue::from_f64(0.0),
+        );
+
+        let p1 = Reflect::get(&result1, &JsValue::from_str("p")).unwrap();
+        let p2 = Reflect::get(&result2, &JsValue::from_str("p")).unwrap();
+        let p3 = Reflect::get(&result3, &JsValue::from_str("p")).unwrap();
+
+        assert!((p1.as_f64().unwrap() - 0.01324).abs() < 0.01);
+        assert!((p2.as_f64().unwrap() - 0.006618).abs() < 0.01);
+        assert!((p3.as_f64().unwrap() - 0.9934).abs() < 0.01);
+    }
 
     #[allow(unused)]
     #[wasm_bindgen_test]
