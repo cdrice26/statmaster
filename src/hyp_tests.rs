@@ -10,6 +10,7 @@ use wasm_bindgen::prelude::*;
 //use web_sys::console;
 
 /// Performs a one-sample z-test on a column of data represented as a JavaScript array.
+/// Uses sample standard error as an estimate for population standard deviation.
 ///
 /// # Arguments
 ///
@@ -73,6 +74,7 @@ pub fn one_samp_z_test(column: &JsValue, tails: &JsValue, mu0: &JsValue) -> JsVa
 }
 
 /// Performs a two-sample z-test on two columns of data represented as JavaScript arrays.
+/// Uses sample standard errors as an estimate for population standard deviations.
 ///
 /// # Arguments
 ///
