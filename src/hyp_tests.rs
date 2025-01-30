@@ -7,7 +7,7 @@ use statrs::distribution::Normal;
 use statrs::distribution::StudentsT;
 use statrs::statistics::Statistics;
 use wasm_bindgen::prelude::*;
-use web_sys::console;
+//use web_sys::console;
 
 /// Performs a one-sample z-test on a column of data represented as a JavaScript array.
 ///
@@ -63,6 +63,58 @@ pub fn one_samp_z_test(column: &JsValue, tails: &JsValue, mu0: &JsValue) -> JsVa
             );
             return obj.into();
         }
+    };
+
+    let obj = Object::new();
+    let _ = Reflect::set(&obj, &JsValue::from_str("z"), &JsValue::from_f64(z));
+    let _ = Reflect::set(&obj, &JsValue::from_str("p"), &JsValue::from_f64(p));
+
+    obj.into()
+}
+
+/// Performs a two-sample z-test on two columns of data represented as JavaScript arrays.
+///
+/// # Arguments
+///
+/// * `column1` - A reference to a JsValue representing a JavaScript array of f64 numbers.
+/// * `column2` - A reference to a JsValue representing a JavaScript array of f64 numbers.
+/// * `tails` - A reference to a JsValue representing the tails of the test.
+/// * `delta0` - A reference to a JsValue representing the hypothesized difference in means.
+///
+/// # Returns
+///
+/// * A reference to a JsValue representing the p-value and z-statistic of the test.
+#[wasm_bindgen]
+pub fn two_samp_z_test(
+    column1: &JsValue,
+    column2: &JsValue,
+    tails: &JsValue,
+    delta0: &JsValue,
+) -> JsValue {
+    let d0 = delta0.as_f64().unwrap();
+    let tails = tails.as_string().unwrap();
+
+    let c1 = js_array_to_vector(column1);
+    let c2 = js_array_to_vector(column2);
+
+    let n1 = c1.len() as f64;
+    let n2 = c2.len() as f64;
+
+    let mean1 = c1.iter().sum::<f64>() / n1;
+    let mean2 = c2.iter().sum::<f64>() / n2;
+
+    let s1 = c1.iter().map(|x| (x - mean1).powi(2)).sum::<f64>() / (n1 - 1.0);
+    let s2 = c2.iter().map(|x| (x - mean2).powi(2)).sum::<f64>() / (n2 - 1.0);
+
+    let z = (mean1 - mean2 - d0) / f64::sqrt(s1 / n1 + s2 / n2);
+
+    let dist = Normal::new(0.0, 1.0).unwrap();
+
+    let p = match tails.as_str() {
+        "two-sided" => 2.0 * (1.0 - dist.cdf(z.abs())),
+        "less" => dist.cdf(z),
+        "greater" => 1.0 - dist.cdf(z),
+        _ => 0.0,
     };
 
     let obj = Object::new();
@@ -409,6 +461,40 @@ mod tests {
         assert!((p1.as_f64().unwrap() - 0.00002209).abs() < 0.01);
         assert!((p2.as_f64().unwrap() - 0.00001105).abs() < 0.01);
         assert!((p3.as_f64().unwrap() - 1.0).abs() < 0.01);
+    }
+
+    #[allow(unused)]
+    #[wasm_bindgen_test]
+    fn test_two_samp_z_test() {
+        let column1 = vec_to_jsvalue(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
+        let column2 = vec_to_jsvalue(vec![2.0, 3.0, 4.0, 5.0, 6.0]);
+
+        let result1 = two_samp_z_test(
+            &column1,
+            &column2,
+            &JsValue::from_str("two-sided"),
+            &JsValue::from_f64(0.0),
+        );
+        let result2 = two_samp_z_test(
+            &column1,
+            &column2,
+            &JsValue::from_str("greater"),
+            &JsValue::from_f64(0.0),
+        );
+        let result3 = two_samp_z_test(
+            &column1,
+            &column2,
+            &JsValue::from_str("less"),
+            &JsValue::from_f64(0.0),
+        );
+
+        let p1 = Reflect::get(&result1, &JsValue::from_str("p")).unwrap();
+        let p2 = Reflect::get(&result2, &JsValue::from_str("p")).unwrap();
+        let p3 = Reflect::get(&result3, &JsValue::from_str("p")).unwrap();
+
+        assert!((p1.as_f64().unwrap() - 0.3173).abs() < 0.01);
+        assert!((p2.as_f64().unwrap() - 0.8413).abs() < 0.01);
+        assert!((p3.as_f64().unwrap() - 0.1587).abs() < 0.01);
     }
 
     #[allow(unused)]
