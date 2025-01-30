@@ -1,9 +1,12 @@
-x <- c(1, 2, 3, 4, 5)
-y <- c(2, 5, 4, 7, 9)
+library(BSDA)
+
+sample_data <- c(1, 2, 3, 4, 5)
 
 print(
-  t.test(
-    x = x, y = y, alternative = "two.sided", conf.level = 0.95,
-    paired = TRUE
+  z.test(
+    x = sample_data,
+    alternative = "less",
+    mu = 0,
+    sigma.x = sd(sample_data)
   )
 )
