@@ -34,6 +34,26 @@ two_samp_var_interval(column1: Array<number>, column2: Array<number>, alpha: num
 Using any of these functions returns an array with the lower and upper bounds.
 
 ### Hypothesis Tests
+- One-sample Z-Test
+```ts
+one_samp_z_test(column: Array<number>, tails: "two-sided" | "less" | "greater", mu0: number): {z: number, p: number}
+```
+- Two-sample Z-Test
+```ts
+two_samp_z_test(column1: Array<number>, column2: Array<number>, tails: "two-sided" | "less" | "greater", delta0: number): {z: number, p: number}
+```
+- One-sample T-Test
+```ts
+one_samp_t_test(column: Array<number>, tails: "two-sided" | "less" | "greater", mu0: number): {t: number, p: number}
+```
+- Two-sample T-Test
+```ts
+two_samp_t_test(column1: Array<number>, column2: Array<number>, delta0: number, tails: "two-sided" | "less" | "greater"): {t: number, p: number}
+```
+- Matched Pairs T-Test
+```ts
+matched_pairs_t_test(column1: Array<number>, column2: Array<number>, delta0: number, tails: "two-sided" | "less" | "greater"): {t: number, p: number}
+```
 - Two-sample Variance F-Test
 ```ts
 variance_test(column1: Array<number>, column2: Array<number>, tails: "two-sided" | "less" | "greater"): {f: number, p: number}
