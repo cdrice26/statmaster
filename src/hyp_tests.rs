@@ -1,13 +1,13 @@
 use crate::utils::*;
 use js_sys::Object;
 use js_sys::Reflect;
+use statrs::distribution::ChiSquared;
 use statrs::distribution::ContinuousCDF;
 use statrs::distribution::FisherSnedecor;
 use statrs::distribution::Normal;
 use statrs::distribution::StudentsT;
 use statrs::statistics::Statistics;
 use wasm_bindgen::prelude::*;
-//use web_sys::console;
 
 /// Performs a one-sample z-test on a column of data represented as a JavaScript array.
 /// Uses sample standard error as an estimate for population standard deviation.
@@ -427,6 +427,110 @@ pub fn regression_test(x: &JsValue, y: &JsValue) -> JsValue {
     obj.into()
 }
 
+/// Performs a chi-square goodness-of-fit test.
+///
+/// # Arguments
+///
+/// * `actual` - A reference to a JsValue representing the observed frequencies.
+/// * `expected` - A reference to a JsValue representing the expected frequencies.
+///
+/// # Returns
+///
+/// * An object with two properties: `x2` and `p`, the chi-square statistic and p-value,
+///   respectively.
+#[wasm_bindgen]
+pub fn chi2_gof_test(actual: &JsValue, expected: &JsValue) -> JsValue {
+    let actual = js_array_to_vector(actual);
+    let expected = js_array_to_vector(expected);
+    if actual.len() != expected.len() {
+        return JsValue::NULL;
+    }
+
+    let pairs: Vec<(f64, f64)> = actual
+        .iter()
+        .zip(expected.iter())
+        .map(|(a, e)| (*a, *e))
+        .collect();
+
+    let x2 = pairs
+        .iter()
+        .fold(0.0, |x2, (a, e)| x2 + ((a - e).powi(2)) / e);
+
+    let dist = ChiSquared::new((pairs.len() - 1) as f64).unwrap();
+    let p = 1.0 - dist.cdf(x2);
+
+    let obj = Object::new();
+    let _ = Reflect::set(&obj, &JsValue::from_str("x2"), &JsValue::from_f64(x2));
+    let _ = Reflect::set(&obj, &JsValue::from_str("p"), &JsValue::from_f64(p));
+    obj.into()
+}
+
+/// Performs a chi-square independence test.
+///
+/// # Arguments
+///
+/// * `data` - A reference to a JsValue representing the observed frequencies in a table.
+///
+/// # Returns
+///
+/// * An object with three properties: `x2`, `p`, and `exp`, the chi-square statistic, p-value, and expected counts, respectively.
+#[wasm_bindgen]
+pub fn chi2_ind_test(data: &JsValue) -> JsValue {
+    let rows = js_nested_array_to_vector(data);
+    let test_data: Vec<Vec<f64>> = rows.iter().map(|item| js_array_to_vector(item)).collect();
+
+    // Total sum of all observations
+    let total_sum: f64 = test_data.iter().flatten().sum();
+
+    // Row and column totals
+    let row_totals: Vec<f64> = test_data.iter().map(|row| row.iter().sum()).collect();
+    let column_totals: Vec<f64> = (0..test_data[0].len())
+        .map(|col_idx| test_data.iter().map(|row| row[col_idx]).sum())
+        .collect();
+
+    // Calculate expected counts
+    let exp_counts: Vec<Vec<f64>> = row_totals
+        .iter()
+        .map(|&row_total| {
+            column_totals
+                .iter()
+                .map(|&col_total| (row_total * col_total) / total_sum)
+                .collect()
+        })
+        .collect();
+
+    // Calculate chi-squared statistic
+    let x2 = exp_counts
+        .iter()
+        .zip(&test_data)
+        .fold(0.0, |x2, (exp_row, obs_row)| {
+            exp_row.iter().zip(obs_row).fold(x2, |acc, (&exp, &obs)| {
+                // Avoid division by zero
+                if exp == 0.0 {
+                    acc
+                } else {
+                    acc + ((obs - exp).powi(2) / exp)
+                }
+            })
+        });
+
+    // Degrees of freedom: (rows - 1) * (columns - 1)
+    let df = ((test_data.len() - 1) * (test_data[0].len() - 1)) as f64;
+
+    let dist = ChiSquared::new(df).unwrap();
+    let p = 1.0 - dist.cdf(x2);
+
+    let obj = Object::new();
+    let _ = Reflect::set(&obj, &JsValue::from_str("x2"), &JsValue::from_f64(x2));
+    let _ = Reflect::set(&obj, &JsValue::from_str("p"), &JsValue::from_f64(p));
+    let _ = Reflect::set(
+        &obj,
+        &JsValue::from_str("exp"),
+        &nested_vec_to_jsvalue(exp_counts),
+    );
+    obj.into()
+}
+
 #[cfg(test)]
 mod tests {
     use wasm_bindgen_test::*;
@@ -649,5 +753,54 @@ mod tests {
 
         assert!((f.as_f64().unwrap() - 0.1396).abs() < 0.01);
         assert!((p.as_f64().unwrap() - 0.7335).abs() < 0.01);
+    }
+
+    #[allow(unused)]
+    #[wasm_bindgen_test]
+    fn test_chi2_gof_test() {
+        let obs = vec_to_jsvalue(vec![30.0, 25.0, 20.0, 15.0, 25.0, 35.0]);
+        let exp = vec_to_jsvalue(vec![25.0, 25.0, 25.0, 25.0, 25.0, 25.0]);
+
+        let result = chi2_gof_test(&obs, &exp);
+
+        let p = Reflect::get(&result, &JsValue::from_str("p")).unwrap();
+        let x2 = Reflect::get(&result, &JsValue::from_str("x2")).unwrap();
+
+        assert!((p.as_f64().unwrap() - 0.07524).abs() < 0.01);
+        assert!((x2.as_f64().unwrap() - 10.0).abs() < 0.01);
+    }
+
+    #[allow(unused)]
+    #[wasm_bindgen_test]
+    fn test_chi2_ind_test() {
+        let data = nested_vec_to_jsvalue(vec![
+            vec![10.0, 20.0, 30.0],
+            vec![15.0, 25.0, 20.0],
+            vec![5.0, 10.0, 15.0],
+        ]);
+
+        let result = chi2_ind_test(&data);
+
+        let p = Reflect::get(&result, &JsValue::from_str("p")).unwrap();
+        let x2 = Reflect::get(&result, &JsValue::from_str("x2")).unwrap();
+        let exp = Reflect::get(&result, &JsValue::from_str("exp")).unwrap();
+
+        let exp_rows = js_nested_array_to_vector(&exp);
+
+        let exp_cells: Vec<Vec<f64>> = exp_rows
+            .iter()
+            .map(|item| js_array_to_vector(item))
+            .collect();
+
+        assert!((p.as_f64().unwrap() - 0.3746).abs() < 0.01);
+        assert!((x2.as_f64().unwrap() - 4.2395).abs() < 0.01);
+        assert!(
+            exp_cells
+                == vec![
+                    vec![12.0, 22.0, 26.0],
+                    vec![12.0, 22.0, 26.0],
+                    vec![6.0, 11.0, 13.0]
+                ]
+        );
     }
 }
