@@ -1,0 +1,35 @@
+version: 2.1
+
+orbs:
+  rust: circleci/rust@1.6.0
+
+jobs:
+  build-and-test:
+    docker:
+      - image: cimg/rust:1.70.0
+    steps:
+      - checkout
+      - run:
+          name: Update Rust and Cargo
+          command: |
+            curl https://sh.rustup.rs -sSf | sh -s -- -y
+            source "$HOME/.cargo/env"
+            rustup default stable
+            rustup update
+            rustc --version
+            cargo --version
+      - run:
+          name: Install wasm-pack
+          command: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - run:
+          name: Build WebAssembly Package
+          command: wasm-pack build --target web
+      - run:
+          name: Run Tests
+          command: wasm-pack test --headless --chrome
+
+workflows:
+  version: 2
+  build-test:
+    jobs:
+      - build-and-test
