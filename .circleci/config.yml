@@ -6,20 +6,9 @@ orbs:
 jobs:
   build-and-test:
     docker:
-      - image: cimg/rust:1.70.0
+      - image: cimg/rust:1.70.0-browsers
     steps:
       - checkout
-      - run:
-          name: Install System Dependencies
-          command: |
-            sudo apt-get update
-            sudo apt-get install -y \
-              chromium-browser \
-              chromium-chromedriver \
-              libnss3-dev \
-              libgconf-2-4 \
-              snapd
-            sudo snap install --classic chromium
       - run:
           name: Update Rust and Cargo
           command: |
