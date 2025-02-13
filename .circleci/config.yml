@@ -19,8 +19,7 @@ jobs:
               libnss3-dev \
               libgconf-2-4 \
               snapd
-            sudo systemctl start snapd
-            sudo snap install chromium
+            sudo snap install --classic chromium
       - run:
           name: Update Rust and Cargo
           command: |
