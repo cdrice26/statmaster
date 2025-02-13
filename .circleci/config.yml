@@ -22,11 +22,21 @@ jobs:
           name: Install wasm-pack
           command: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - run:
+          name: Install Chrome WebDriver
+          command: |
+            wget -N https://chromedriver.storage.googleapis.com/$(curl -sS https://chromedriver.storage.googleapis.com/LATEST_RELEASE)/chromedriver_linux64.zip -P ~/tmp
+            unzip ~/tmp/chromedriver_linux64.zip -d ~/tmp
+            sudo mv -f ~/tmp/chromedriver /usr/local/bin/chromedriver
+            sudo chown root:root /usr/local/bin/chromedriver
+            sudo chmod 0755 /usr/local/bin/chromedriver
+      - run:
           name: Build WebAssembly Package
           command: wasm-pack build --target web
       - run:
           name: Run Tests
-          command: wasm-pack test --headless --chrome
+          command: |
+            export CHROMEDRIVER_WHITELISTED_IPS=
+            wasm-pack test --headless --chrome
 
 workflows:
   version: 2
