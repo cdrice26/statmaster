@@ -17,7 +17,9 @@ jobs:
               chromium-browser \
               chromium-chromedriver \
               libnss3-dev \
-              libgconf-2-4
+              libgconf-2-4 \
+              snapd
+            sudo systemctl start snapd
             sudo snap install chromium
       - run:
           name: Update Rust and Cargo
